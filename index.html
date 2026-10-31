@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="DARKKNIGHT STUDIO — Independent digital studio" />
+  <title>DARKKNIGHT STUDIO</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./assets/css/main.css" />
+  <link rel="manifest" href="./manifest.json" />
+  <meta name="theme-color" content="#070709" />
+</head>
+<body>
+  <header class="site-header" id="site-header"></header>
+  <main>
+    <section class="hero container">
+      <h1 data-i18n="hero.title">DARKKNIGHT STUDIO</h1>
+      <p data-i18n="hero.slogan"></p>
+      <div class="hero-actions">
+        <a class="btn btn-primary" href="./projects.html" data-i18n="hero.explore"></a>
+        <a class="btn btn-ghost" href="./contact.html" data-i18n="hero.contact"></a>
+      </div>
+    </section>
+
+    <section class="section container">
+      <div class="about-block">
+        <div>
+          <h2 data-i18n="sections.about"></h2>
+          <p style="color:var(--muted)" data-i18n="sections.aboutText"></p>
+        </div>
+        <div class="glass">
+          <strong>Bots · Web · Systems</strong>
+          <p style="color:var(--muted);margin:0.5rem 0 0;font-size:0.92rem">Production delivery · Security-minded · Persian & English</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section container">
+      <div class="section-head">
+        <div>
+          <h2 data-i18n="sections.featuredProjects"></h2>
+        </div>
+        <a href="./projects.html" data-i18n="sections.viewAll"></a>
+      </div>
+      <div class="grid" id="feat-projects"><div class="loading" data-i18n="sections.loading"></div></div>
+    </section>
+
+    <section class="section container">
+      <div class="section-head">
+        <h2 data-i18n="sections.featuredBots"></h2>
+        <a href="./bots.html" data-i18n="sections.viewAll"></a>
+      </div>
+      <div class="grid" id="feat-bots"><div class="loading" data-i18n="sections.loading"></div></div>
+    </section>
+
+    <section class="section container">
+      <div class="section-head">
+        <h2 data-i18n="sections.latestNews"></h2>
+        <a href="./news.html" data-i18n="sections.viewAll"></a>
+      </div>
+      <div class="grid" id="feat-news"><div class="loading" data-i18n="sections.loading"></div></div>
+    </section>
+  </main>
+  <footer class="site-footer" id="site-footer"></footer>
+  <script type="module">
+    import { renderShell, loadPublished } from "./assets/js/layout.js";
+    import { escapeHtml, formatDate } from "./assets/js/utils.js";
+    import { t, getLang, applyI18n } from "./assets/js/i18n.js";
+    import { isConfigured } from "./assets/js/config.js";
+
+    renderShell("index.html");
+
+    function card({ title, body, badge, href, img }) {
+      return `<article class="card">
+        <div class="card-media">${img ? `<img src="${escapeHtml(img)}" alt="" loading="lazy" />` : "DK"}</div>
+        <div class="card-body">
+          <h3>${escapeHtml(title || "")}</h3>
+          <p>${escapeHtml(body || "")}</p>
+          <div class="meta">${badge ? `<span class="badge">${escapeHtml(badge)}</span>` : ""}</div>
+          ${href ? `<p style="margin-top:0.75rem"><a href="${escapeHtml(href)}">${t("sections.readMore")}</a></p>` : ""}
+        </div>
+      </article>`;
+    }
+
+    async function fill(id, table, mapFn) {
+      const el = document.getElementById(id);
+      if (!isConfigured()) {
+        el.innerHTML = `<div class="empty">${t("sections.notConfigured")}</div>`;
+        return;
+      }
+      const { data, error } = await loadPublished(table, { featured: table !== "news", limit: 3 });
+      if (error || !data?.length) {
+        // news may not use is_featured only
+        const fallback = await loadPublished(table, { limit: 3 });
+        if (!fallback.data?.length) {
+          el.innerHTML = `<div class="empty">${t("sections.empty")}</div>`;
+          return;
+        }
+        el.innerHTML = fallback.data.map(mapFn).join("");
+        return;
+      }
+      el.innerHTML = data.map(mapFn).join("");
+    }
+
+    fill("feat-projects", "projects", (p) => card({
+      title: p.title || p.name,
+      body: p.summary || p.description,
+      badge: p.status || p.category,
+      href: p.external_url || "./projects.html",
+      img: p.cover_url,
+    }));
+    fill("feat-bots", "bots", (b) => card({
+      title: b.name,
+      body: b.summary || b.description,
+      badge: b.platform || b.status,
+      href: b.public_url || "./bots.html",
+      img: b.avatar_url,
+    }));
+    fill("feat-news", "news", (n) => card({
+      title: n.title,
+      body: n.summary,
+      badge: formatDate(n.published_at || n.created_at, getLang()),
+      href: `./article.html?id=${encodeURIComponent(n.id)}`,
+      img: n.cover_url,
+    }));
+    applyI18n();
+  </script>
+</body>
+</html>

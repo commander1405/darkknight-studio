@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DARKKNIGHT STUDIO</title>
+  <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./assets/css/main.css" />
+</head>
+<body>
+  <header class="site-header" id="site-header"></header>
+  <main class="section container">
+    <div class="section-head"><h2 data-i18n="sections.allProjects"></h2></div>
+    <div class="filters">
+      <input type="search" id="q" data-i18n-placeholder="sections.search" />
+    </div>
+    <div class="grid" id="list"><div class="loading" data-i18n="sections.loading"></div></div>
+  </main>
+  <footer class="site-footer" id="site-footer"></footer>
+  <script type="module">
+    import { renderShell, loadPublished } from "./assets/js/layout.js";
+    import { escapeHtml, formatDate } from "./assets/js/utils.js";
+    import { t, getLang, applyI18n } from "./assets/js/i18n.js";
+    import { isConfigured } from "./assets/js/config.js";
+    import { getSupabase } from "./assets/js/supabase-client.js";
+    renderShell("projects.html");
+    const table = "projects";
+    const usePublished = true;
+
+    async function load(q = "") {
+      const el = document.getElementById("list");
+      if (!isConfigured()) {
+        el.innerHTML = `<div class="empty">${t("sections.notConfigured")}</div>`;
+        return;
+      }
+      const sb = await getSupabase();
+      let query = sb.from(table).select("*").order("sort_order", { ascending: true }).order("created_at", { ascending: false });
+      if (usePublished) query = query.eq("is_published", true);
+      if (table === "team_members") query = sb.from(table).select("*").eq("is_visible", true).order("sort_order");
+      const { data, error } = await query;
+      let rows = data || [];
+      if (q) {
+        const qq = q.toLowerCase();
+        rows = rows.filter((r) => JSON.stringify(r).toLowerCase().includes(qq));
+      }
+      if (!rows.length) {
+        el.innerHTML = `<div class="empty">${t("sections.empty")}</div>`;
+        return;
+      }
+      el.innerHTML = rows.map((r) => {
+        const title = r.title || r.name || "";
+        const body = r.summary || r.description || r.role || "";
+        const img = r.cover_url || r.avatar_url || r.image_url || "";
+        const badge = r.status || r.category || r.platform || r.position || "";
+        const link = r.external_url || r.public_url || (table === "news" ? `./article.html?id=${encodeURIComponent(r.id)}` : (table === "products" ? `./product.html?id=${encodeURIComponent(r.id)}` : ""));
+        return `<article class="card">
+          <div class="card-media">${img ? `<img src="${escapeHtml(img)}" alt="" loading="lazy"/>` : "DK"}</div>
+          <div class="card-body">
+            <h3>${escapeHtml(title)}</h3>
+            <p>${escapeHtml((body || "").slice(0, 160))}</p>
+            <div class="meta">${badge ? `<span class="badge">${escapeHtml(badge)}</span>` : ""}</div>
+            ${link ? `<p style="margin-top:.75rem"><a href="${escapeHtml(link)}">${t("sections.readMore")}</a></p>` : ""}
+          </div>
+        </article>`;
+      }).join("");
+    }
+    document.getElementById("q")?.addEventListener("input", (e) => load(e.target.value.trim()));
+    load();
+    applyI18n();
+  </script>
+</body>
+</html>

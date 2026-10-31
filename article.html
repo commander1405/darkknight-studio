@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>News — DARKKNIGHT STUDIO</title>
+  <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./assets/css/main.css" />
+</head>
+<body>
+  <header class="site-header" id="site-header"></header>
+  <main class="section container" id="main"><div class="loading"></div></main>
+  <footer class="site-footer" id="site-footer"></footer>
+  <script type="module">
+    import { renderShell } from "./assets/js/layout.js";
+    import { getSupabase, isConfigured } from "./assets/js/supabase-client.js";
+    import { t, applyI18n, getLang } from "./assets/js/i18n.js";
+    import { escapeHtml, formatDate } from "./assets/js/utils.js";
+    renderShell("news.html");
+    const id = new URLSearchParams(location.search).get("id");
+    const main = document.getElementById("main");
+    if (!isConfigured() || !id) main.innerHTML = `<div class="empty">${t("sections.notConfigured")}</div>`;
+    else {
+      const sb = await getSupabase();
+      const { data: n } = await sb.from("news").select("*").eq("id", id).eq("is_published", true).maybeSingle();
+      if (!n) main.innerHTML = `<div class="empty">${t("sections.empty")}</div>`;
+      else {
+        document.title = n.title + " — DARKKNIGHT STUDIO";
+        main.innerHTML = `<article class="glass">
+          ${n.cover_url ? `<img src="${escapeHtml(n.cover_url)}" alt="" style="width:100%;max-height:320px;object-fit:cover;border-radius:12px;margin-bottom:1rem" />` : ""}
+          <h1>${escapeHtml(n.title)}</h1>
+          <p style="color:var(--muted)">${formatDate(n.published_at||n.created_at, getLang())}</p>
+          <div style="white-space:pre-wrap;line-height:1.75">${escapeHtml(n.body||n.summary||"")}</div>
+        </article>`;
+      }
+    }
+    applyI18n();
+  </script>
+</body>
+</html>

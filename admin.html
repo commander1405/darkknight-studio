@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Admin — DARKKNIGHT STUDIO</title>
+  <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./assets/css/main.css" />
+  <style>
+    .admin-layout { display: grid; grid-template-columns: 220px 1fr; min-height: calc(100vh - 64px); }
+    .side { border-inline-end: 1px solid var(--border); background: var(--bg-2); padding: 1rem 0.75rem; }
+    .side button { display: block; width: 100%; text-align: start; background: transparent; border: 0; color: var(--muted); padding: 0.65rem 0.75rem; border-radius: 10px; cursor: pointer; }
+    .side button.active, .side button:hover { background: rgba(255,255,255,0.05); color: var(--text); }
+    .admin-main { padding: 1.25rem; }
+    .admin-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+    .admin-table th, .admin-table td { border-bottom: 1px solid var(--border); padding: 0.55rem 0.4rem; text-align: start; }
+    @media (max-width: 800px) { .admin-layout { grid-template-columns: 1fr; } .side { display: flex; flex-wrap: wrap; gap: 0.25rem; } }
+  </style>
+</head>
+<body>
+  <header class="site-header" id="site-header"></header>
+  <div class="admin-layout" id="app" style="display:none">
+    <aside class="side" id="side"></aside>
+    <div class="admin-main">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap">
+        <h1 data-i18n="admin.dashboard"></h1>
+        <button class="btn btn-ghost" id="logout" data-i18n="admin.logout"></button>
+      </div>
+      <div id="panel"></div>
+    </div>
+  </div>
+  <script type="module">
+    import { renderShell } from "./assets/js/layout.js";
+    import { getSupabase, isConfigured } from "./assets/js/supabase-client.js";
+    import { t, applyI18n } from "./assets/js/i18n.js";
+    import { toast, escapeHtml, href, formatDate } from "./assets/js/utils.js";
+    renderShell();
+    applyI18n();
+
+    if (!isConfigured()) {
+      document.body.insertAdjacentHTML("beforeend", `<div class="section container empty">${t("sections.notConfigured")}</div>`);
+    } else {
+      const sb = await getSupabase();
+      const { data: { session } } = await sb.auth.getSession();
+      if (!session) location.href = href("admin-login.html");
+      else {
+        const { data: profile } = await sb.from("profiles").select("*").eq("id", session.user.id).maybeSingle();
+        if (!profile || !profile.is_active || !["owner", "admin"].includes(profile.role)) {
+          await sb.auth.signOut();
+          location.href = href("admin-login.html");
+        } else {
+          document.getElementById("app").style.display = "grid";
+          const sections = [
+            ["overview", "admin.overview"],
+            ["projects", "nav.projects"],
+            ["bots", "nav.bots"],
+            ["news", "nav.news"],
+            ["products", "nav.shop"],
+            ["orders", "Purchase requests"],
+            ["tickets", "nav.support"],
+            ["team", "nav.team"],
+            ["contact", "nav.contact"],
+            ["visitors", "Visitors"],
+          ];
+          const side = document.getElementById("side");
+          side.innerHTML = sections.map(([id, key], i) =>
+            `<button type="button" data-id="${id}" class="${i===0?"active":""}">${t(key) === key ? key : t(key)}</button>`
+          ).join("");
+
+          document.getElementById("logout").onclick = async () => {
+            await sb.auth.signOut();
+            location.href = href("admin-login.html");
+          };
+
+          async function show(id) {
+            side.querySelectorAll("button").forEach((b) => b.classList.toggle("active", b.dataset.id === id));
+            const panel = document.getElementById("panel");
+            panel.innerHTML = `<div class="loading">${t("sections.loading")}</div>`;
+            if (id === "overview") {
+              const tables = ["projects", "bots", "news", "products", "purchase_requests", "support_tickets", "contact_messages"];
+              const counts = {};
+              for (const tb of tables) {
+                const { count } = await sb.from(tb).select("*", { count: "exact", head: true });
+                counts[tb] = count ?? 0;
+              }
+              const { count: visitors } = await sb.from("visitor_registry").select("*", { count: "exact", head: true });
+              panel.innerHTML = `<div class="grid">${
+                Object.entries({ ...counts, unique_visitors: visitors || 0 }).map(([k, v]) =>
+                  `<div class="glass"><div style="color:var(--muted);font-size:0.85rem">${escapeHtml(k)}</div><div style="font-size:1.6rem;font-weight:700">${v}</div></div>`
+                ).join("")
+              }</div>`;
+              return;
+            }
+            const map = {
+              projects: "projects",
+              bots: "bots",
+              news: "news",
+              products: "products",
+              orders: "purchase_requests",
+              tickets: "support_tickets",
+              team: "team_members",
+              contact: "contact_messages",
+              visitors: "visitor_registry",
+            };
+            const table = map[id];
+            const { data, error } = await sb.from(table).select("*").order("created_at", { ascending: false }).limit(100);
+            if (error) {
+              panel.innerHTML = `<div class="empty">${escapeHtml(error.message)}</div>`;
+              return;
+            }
+            if (!data?.length) {
+              panel.innerHTML = `<div class="empty">${t("sections.empty")}</div>`;
+              return;
+            }
+            const cols = Object.keys(data[0]).filter((c) => !["keys", "body"].includes(c)).slice(0, 7);
+            panel.innerHTML = `<div style="overflow:auto"><table class="admin-table"><thead><tr>${cols.map((c)=>`<th>${escapeHtml(c)}</th>`).join("")}</tr></thead>
+              <tbody>${data.map((row)=>`<tr>${cols.map((c)=>`<td>${escapeHtml(String(row[c]??"").slice(0,80))}</td>`).join("")}</tr>`).join("")}</tbody></table></div>
+              <p style="color:var(--muted);font-size:0.85rem;margin-top:0.75rem">Role: ${escapeHtml(profile.role)} · CRUD forms can be extended per table; data is live from Supabase with RLS.</p>`;
+          }
+
+          side.addEventListener("click", (e) => {
+            const id = e.target.dataset?.id;
+            if (id) show(id);
+          });
+          show("overview");
+        }
+      }
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Product — DARKKNIGHT STUDIO</title>
+  <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./assets/css/main.css" />
+</head>
+<body>
+  <header class="site-header" id="site-header"></header>
+  <main class="section container" id="main"><div class="loading" data-i18n="sections.loading"></div></main>
+  <footer class="site-footer" id="site-footer"></footer>
+  <script type="module">
+    import { renderShell } from "./assets/js/layout.js";
+    import { getSupabase, isConfigured } from "./assets/js/supabase-client.js";
+    import { t, applyI18n } from "./assets/js/i18n.js";
+    import { toast, escapeHtml } from "./assets/js/utils.js";
+    renderShell("shop.html");
+    const id = new URLSearchParams(location.search).get("id");
+    const main = document.getElementById("main");
+    if (!isConfigured() || !id) {
+      main.innerHTML = `<div class="empty">${t("sections.notConfigured")}</div>`;
+    } else {
+      const sb = await getSupabase();
+      const { data: p } = await sb.from("products").select("*").eq("id", id).eq("is_published", true).maybeSingle();
+      if (!p) main.innerHTML = `<div class="empty">${t("sections.empty")}</div>`;
+      else {
+        main.innerHTML = `
+          <article class="glass">
+            ${p.image_url ? `<img src="${escapeHtml(p.image_url)}" alt="" style="border-radius:12px;margin-bottom:1rem;max-height:280px;object-fit:cover;width:100%" />` : ""}
+            <h1>${escapeHtml(p.name)}</h1>
+            <p style="color:var(--muted)">${escapeHtml(p.description||"")}</p>
+            <p><strong>${escapeHtml(String(p.price_label || p.price || ""))}</strong></p>
+            <button class="btn btn-primary" id="buy" data-i18n="sections.purchase"></button>
+            <form class="form" id="buy-form" style="display:none;margin-top:1rem">
+              <label><span data-i18n="sections.name"></span><input name="name" required /></label>
+              <label><span data-i18n="sections.email"></span><input name="contact" required /></label>
+              <label><span data-i18n="sections.message"></span><textarea name="note" maxlength="1000"></textarea></label>
+              <button class="btn btn-primary" type="submit" data-i18n="sections.submit"></button>
+            </form>
+          </article>`;
+        applyI18n();
+        document.getElementById("buy").onclick = () => {
+          document.getElementById("buy-form").style.display = "grid";
+        };
+        document.getElementById("buy-form").onsubmit = async (e) => {
+          e.preventDefault();
+          const fd = new FormData(e.target);
+          const { error } = await sb.from("purchase_requests").insert({
+            product_id: p.id,
+            name: String(fd.get("name")||"").trim(),
+            contact: String(fd.get("contact")||"").trim(),
+            note: String(fd.get("note")||"").trim(),
+            status: "pending",
+          });
+          if (error) toast(t("sections.error"), "err");
+          else { toast(t("sections.success"), "ok"); e.target.reset(); }
+        };
+      }
+    }
+    applyI18n();
+  </script>
+</body>
+</html>
