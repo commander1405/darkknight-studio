@@ -1,28 +1,19 @@
 # DARKKNIGHT STUDIO
 
-Official studio website (static + Supabase).
+https://commander1405.github.io/darkknight-studio/
 
-**Live:** https://commander1405.github.io/darkknight-studio/
+## Stack
+Vanilla HTML/CSS/JS · Supabase · GitHub Pages · PWA
 
-## Quick setup
-1. Run `supabase/migrations/001_init.sql` in Supabase SQL editor.
-2. Create Auth user (email/password) — this is the owner account.
-3. Link profile:
-```sql
-insert into profiles (id, email, role, is_active)
-values ('AUTH_USER_UUID', 'you@email.com', 'owner', true);
-```
-4. Set `SUPABASE_URL` and `SUPABASE_ANON_KEY` in `assets/js/config.js`.
+## Setup
+1. Run SQL in order:
+   - `supabase/migrations/001_init.sql` (if not already)
+   - `supabase/migrations/002_studio_upgrade.sql`
+2. Create Auth user; insert `profiles` row with `role = 'owner'`.
+3. Set `SUPABASE_URL` and `SUPABASE_ANON_KEY` in `assets/js/config.js`.
 
-## Features
-- Home, Projects, Bots, Team, News, Shop, Support, Contact
-- FA/EN i18n + RTL
-- Admin login (owner/admin only, no public signup)
-- Admin dashboard overview + live tables
-- Purchase requests (no payment gateway)
-- Support tickets with reference lookup
-- Visitor registry + page views RPC
-- Service worker + push subscription plumbing (VAPID private key stays server-side)
+## Admin
+URL only: `/admin-login.html` (not linked in public navigation).
 
-## Security
-See `SECURITY.md`. Never commit service_role keys.
+## Mobile
+Floating bottom tab bar + “More” sheet. Desktop uses full top navigation.

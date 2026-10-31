@@ -27,6 +27,7 @@
     import { t, applyI18n } from "./assets/js/i18n.js";
     import { href } from "./assets/js/utils.js";
     renderShell();
+    document.getElementById("mobile-tabbar")?.remove();
     applyI18n();
     document.getElementById("login-form").onsubmit = async (e) => {
       e.preventDefault();

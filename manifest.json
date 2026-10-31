@@ -1,1 +1,21 @@
-{"name":"DARKKNIGHT STUDIO","short_name":"DarkKnight","start_url":"./","display":"standalone","background_color":"#070709","theme_color":"#070709","lang":"fa"}
+{
+  "name": "DARKKNIGHT STUDIO",
+  "short_name": "DarkKnight",
+  "description": "Independent digital studio",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#050507",
+  "theme_color": "#050507",
+  "lang": "fa",
+  "dir": "rtl",
+  "icons": [
+    {
+      "src": "./assets/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

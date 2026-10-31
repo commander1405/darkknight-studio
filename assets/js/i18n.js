@@ -1,7 +1,7 @@
 const dict = {
   en: {
     dir: "ltr",
-    nav: { home: "Home", projects: "Projects", bots: "Bots", team: "Team", news: "News", shop: "Shop", support: "Support", contact: "Contact", admin: "Admin" },
+    nav: { home: "Home", projects: "Projects", bots: "Bots", team: "Team", news: "News", shop: "Shop", support: "Support", contact: "Contact", admin: "Admin", more: "More" },
     hero: {
       title: "DARKKNIGHT STUDIO",
       slogan: "Independent digital studio building bots, products, and experiences.",
@@ -45,6 +45,7 @@ const dict = {
       pushDenied: "Notifications blocked in browser settings",
     },
     footer: { rights: "All rights reserved.", studio: "DARKKNIGHT STUDIO" },
+    settings: { close: "Close" },
     admin: {
       login: "Admin Login",
       email: "Email",
@@ -58,7 +59,7 @@ const dict = {
   },
   fa: {
     dir: "rtl",
-    nav: { home: "خانه", projects: "پروژه‌ها", bots: "بات‌ها", team: "تیم", news: "اخبار", shop: "فروشگاه", support: "پشتیبانی", contact: "تماس", admin: "مدیریت" },
+    nav: { home: "خانه", projects: "پروژه‌ها", bots: "بات‌ها", team: "تیم", news: "اخبار", shop: "فروشگاه", support: "پشتیبانی", contact: "تماس", admin: "مدیریت", more: "بیشتر" },
     hero: {
       title: "دارک‌نایت استودیو",
       slogan: "استودیوی مستقل دیجیتال برای ساخت بات، محصول و تجربه‌های واقعی.",
@@ -102,6 +103,7 @@ const dict = {
       pushDenied: "اعلان در تنظیمات مرورگر مسدود است",
     },
     footer: { rights: "تمامی حقوق محفوظ است.", studio: "دارک‌نایت استودیو" },
+    settings: { close: "بستن" },
     admin: {
       login: "ورود مدیریت",
       email: "ایمیل",
