@@ -3,43 +3,19 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>Admin — DARKKNIGHT STUDIO</title>
+  <title>Control Center — DARKKNIGHT STUDIO</title>
   <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="./assets/css/main.css" />
-  <style>
-    .admin-layout { display: grid; grid-template-columns: 220px 1fr; min-height: calc(100vh - 64px); }
-    .side { border-inline-end: 1px solid var(--border); background: var(--bg-elevated); padding: 1rem 0.75rem; }
-    .side button { display: block; width: 100%; text-align: start; background: transparent; border: 0; color: var(--muted); padding: 0.65rem 0.75rem; border-radius: 10px; cursor: pointer; }
-    .side button.active, .side button:hover { background: rgba(255,255,255,0.05); color: var(--text); }
-    .admin-main { padding: 1.25rem; }
-    .admin-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
-    .admin-table th, .admin-table td { border-bottom: 1px solid var(--border); padding: 0.55rem 0.4rem; text-align: start; vertical-align: top; }
-    .mobile-tabbar { display: none !important; }
-    @media (max-width: 800px) {
-      .admin-layout { grid-template-columns: 1fr; }
-      .side { display: flex; flex-wrap: wrap; gap: 0.25rem; border: 0; border-bottom: 1px solid var(--border); }
-      .side button { width: auto; }
-    }
-  </style>
+  <link rel="stylesheet" href="./assets/css/admin.css" />
+  <meta name="robots" content="noindex,nofollow" />
+  <meta name="theme-color" content="#050507" />
 </head>
 <body>
-  <header class="site-header" id="site-header"></header>
-  <div class="admin-layout" id="app" style="display:none">
-    <aside class="side" id="side"></aside>
-    <div class="admin-main">
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;margin-bottom:1rem">
-        <h1 data-i18n="admin.dashboard" style="margin:0"></h1>
-        <button class="btn btn-ghost" id="logout" data-i18n="admin.logout"></button>
-      </div>
-      <div id="panel"></div>
-    </div>
-  </div>
+  <div id="admin-root" class="admin-shell"></div>
   <script type="module">
-    import { renderShell } from "./assets/js/layout.js";
+    import { initI18n } from "./assets/js/i18n.js";
     import { bootAdmin } from "./assets/js/admin-app.js";
-    renderShell();
-    // hide public mobile bar on admin
-    document.getElementById("mobile-tabbar")?.remove();
+    initI18n();
     bootAdmin();
   </script>
 </body>

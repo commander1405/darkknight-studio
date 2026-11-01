@@ -17,3 +17,9 @@ URL only: `/admin-login.html` (not linked in public navigation).
 
 ## Mobile
 Floating bottom tab bar + “More” sheet. Desktop uses full top navigation.
+
+## Admin / Owner panel
+- URL: `/admin.html` (login via `/admin-login.html` — not in public nav)
+- Owner: full control + admin management
+- Admin: permissions JSON on `profiles.permissions` (default deny)
+- Migrations: run `001` → `002` → `003_admin_permissions.sql`
