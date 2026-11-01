@@ -85,14 +85,15 @@ export async function disablePush() {
       if (isConfigured()) {
         const sb = await getSupabase();
         if (sb) {
-          await sb.from("push_subscriptions").upsert(
-            {
-              endpoint,
+          const { error: rpcErr } = await sb.rpc("deactivate_push_subscription", {
+            p_endpoint: endpoint,
+          });
+          if (rpcErr) {
+            await sb.from("push_subscriptions").update({
               is_active: false,
               updated_at: new Date().toISOString(),
-            },
-            { onConflict: "endpoint" }
-          );
+            }).eq("endpoint", endpoint).eq("visitor_id", visitorId());
+          }
         }
       }
     }
@@ -105,15 +106,20 @@ async function saveSubscription(sub) {
   if (!sb) return;
   const json = sub.toJSON();
   const keys = json.keys || {};
-  let user_id = null;
-  try {
-    const { data: { user } } = await sb.auth.getUser();
-    user_id = user?.id || null;
-  } catch (_) {}
+  const vid = visitorId();
+  // Prefer SECURITY DEFINER RPC (binds visitor_id from X-Visitor-ID server-side)
+  const { error: rpcErr } = await sb.rpc("upsert_push_subscription", {
+    p_endpoint: sub.endpoint,
+    p_p256dh: keys.p256dh || null,
+    p_auth: keys.auth || null,
+    p_user_agent: navigator.userAgent.slice(0, 240),
+    p_keys: keys,
+  });
+  if (!rpcErr) return;
+  // Fallback: direct upsert with matching visitor_id (RLS checks header)
   const row = {
     endpoint: sub.endpoint,
-    visitor_id: visitorId(),
-    user_id,
+    visitor_id: vid,
     keys,
     p256dh: keys.p256dh || null,
     auth: keys.auth || null,
@@ -122,7 +128,7 @@ async function saveSubscription(sub) {
     updated_at: new Date().toISOString(),
   };
   const { error } = await sb.from("push_subscriptions").upsert(row, { onConflict: "endpoint" });
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(rpcErr.message || error.message);
 }
 
 /** Glass prompt — only after delay, never auto request permission */

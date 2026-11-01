@@ -1,18 +1,28 @@
 import { CONFIG, isConfigured } from "./config.js";
+import { visitorId } from "./utils.js";
 
 let client = null;
+let clientVisitor = null;
 
 export async function getSupabase() {
   if (!isConfigured()) return null;
-  if (client) return client;
+  const vid = visitorId();
+  // Recreate client if visitor id changed (rare) so header stays correct
+  if (client && clientVisitor === vid) return client;
   if (!window.supabase) {
     await loadSdk();
   }
+  clientVisitor = vid;
   client = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY, {
     auth: {
       persistSession: true,
       autoRefreshToken: true,
       detectSessionInUrl: true,
+    },
+    global: {
+      headers: {
+        "X-Visitor-ID": vid,
+      },
     },
   });
   return client;
