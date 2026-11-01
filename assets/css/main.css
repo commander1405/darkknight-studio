@@ -301,3 +301,9 @@ html[dir="rtl"] .hero h1 { letter-spacing: 0; }
     transition-duration: 0.01ms !important;
   }
 }
+
+.admin-entry {
+  opacity: 0.72;
+  font-size: 0.8rem !important;
+}
+.admin-entry:hover { opacity: 1; }

@@ -203,3 +203,44 @@ html[dir="rtl"] .admin-side button.nav-item.active {
 @media (prefers-reduced-motion: reduce) {
   .form-drawer, .skeleton { animation: none; }
 }
+
+/* Media upload fields */
+.media-field {
+  display: grid;
+  gap: 0.45rem;
+  padding: 0.85rem;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,0.02);
+  margin-bottom: 0.35rem;
+}
+.media-label { font-size: 0.85rem; color: var(--muted); }
+.media-preview-wrap {
+  min-height: 120px;
+  max-height: 220px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: rgba(0,0,0,0.35);
+  display: grid;
+  place-items: center;
+}
+.media-preview {
+  max-width: 100%;
+  max-height: 220px;
+  object-fit: contain;
+  display: block;
+}
+.media-placeholder { color: var(--muted); font-size: 0.85rem; }
+.media-actions {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem;
+}
+.media-pick {
+  cursor: pointer;
+  margin: 0;
+  width: auto !important;
+  display: inline-flex !important;
+}
+.media-status { font-size: 0.9rem; min-width: 1.2rem; }
+.media-hint { margin: 0; font-size: 0.75rem; color: var(--muted); }
+.media-url-label { display: grid; gap: 0.3rem; font-size: 0.8rem; color: var(--muted); }
+.media-url-label input { width: 100%; }

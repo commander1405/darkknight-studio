@@ -1,6 +1,7 @@
 import { getSupabase, isConfigured } from "./supabase-client.js";
 import { t, applyI18n, getLang } from "./i18n.js";
 import { toast, escapeHtml, href, formatDate } from "./utils.js";
+import { MEDIA_FIELDS, mediaFieldHtml, bindMediaFields } from "./media-upload.js";
 
 /** Permission keys — deny by default for role=admin */
 export const PERMS = [
@@ -349,6 +350,8 @@ async function renderCrud(panel, sb, table, def, profile) {
         </div>
       </form>`;
     wrap.querySelector("#form-cancel").onclick = () => { wrap.style.display = "none"; };
+    const formEl = wrap.querySelector("#entity-form");
+    bindMediaFields(formEl, table, (msg) => toast(msg, "err"));
     wrap.querySelector("#entity-form").onsubmit = async (e) => {
       e.preventDefault();
       const payload = {};
@@ -393,6 +396,10 @@ async function renderCrud(panel, sb, table, def, profile) {
 
 function fieldHtml(f, value) {
   const label = escapeHtml(f.key);
+  // Device upload for media URL fields (not external/public links)
+  if (MEDIA_FIELDS.has(f.key) || (f.type === "url" && /_(url)$/.test(f.key) && !["external_url", "public_url"].includes(f.key))) {
+    return mediaFieldHtml(f.key, value, getLang());
+  }
   if (f.type === "bool") {
     return `<label style="display:flex;align-items:center;gap:0.5rem;flex-direction:row">
       <input type="checkbox" name="${f.key}" ${value ? "checked" : ""} /> <span>${label}</span></label>`;

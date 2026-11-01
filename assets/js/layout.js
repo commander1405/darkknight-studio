@@ -45,6 +45,7 @@ export function renderShell(active) {
         </ul>
         <div class="nav-actions">
           <button type="button" class="lang-btn" id="lang-toggle" aria-label="Language">${getLang() === "fa" ? "EN" : "فا"}</button>
+          <a class="lang-btn admin-entry" href="${href("admin-login.html")}" data-i18n="nav.adminLogin">${t("nav.adminLogin")}</a>
         </div>
       </div>`;
     header.querySelector("#lang-toggle")?.addEventListener("click", () => {
@@ -123,6 +124,7 @@ function openMoreSheet(file) {
         ${PAGES.filter(([p]) => !["index.html", "projects.html", "bots.html", "shop.html"].includes(p))
           .map(([p, k]) => `<a class="${file === p ? "active" : ""}" href="${href(p)}" data-i18n="${k}"></a>`)
           .join("")}
+        <a href="${href("admin-login.html")}" data-i18n="nav.adminLogin" class="admin-entry-sheet"></a>
       </nav>
       <button type="button" class="btn btn-ghost" data-close data-i18n="settings.close"></button>
     </div>`;

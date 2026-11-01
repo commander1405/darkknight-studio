@@ -1,7 +1,7 @@
 const dict = {
   en: {
     dir: "ltr",
-    nav: { home: "Home", projects: "Projects", bots: "Bots", team: "Team", news: "News", shop: "Shop", support: "Support", contact: "Contact", admin: "Admin", more: "More" },
+    nav: { home: "Home", projects: "Projects", bots: "Bots", team: "Team", news: "News", shop: "Shop", support: "Support", contact: "Contact", admin: "Admin", adminLogin: "Admin Login", more: "More" },
     hero: {
       title: "DARKKNIGHT STUDIO",
       slogan: "Independent digital studio building bots, products, and experiences.",
@@ -59,7 +59,7 @@ const dict = {
   },
   fa: {
     dir: "rtl",
-    nav: { home: "خانه", projects: "پروژه‌ها", bots: "بات‌ها", team: "تیم", news: "اخبار", shop: "فروشگاه", support: "پشتیبانی", contact: "تماس", admin: "مدیریت", more: "بیشتر" },
+    nav: { home: "خانه", projects: "پروژه‌ها", bots: "بات‌ها", team: "تیم", news: "اخبار", shop: "فروشگاه", support: "پشتیبانی", contact: "تماس", admin: "مدیریت", adminLogin: "ورود مدیران", more: "بیشتر" },
     hero: {
       title: "دارک‌نایت استودیو",
       slogan: "استودیوی مستقل دیجیتال برای ساخت بات، محصول و تجربه‌های واقعی.",
