@@ -2,6 +2,7 @@ import { initI18n, setLang, getLang, t, applyI18n } from "./i18n.js";
 import { href, visitorId, toast } from "./utils.js";
 import { CONFIG, isConfigured } from "./config.js";
 import { getSupabase } from "./supabase-client.js";
+import { maybeShowPushPrompt, registerSW } from "./push.js";
 
 const PAGES = [
   ["index.html", "nav.home", "⌂"],
@@ -78,11 +79,8 @@ export function renderShell(active) {
 
   applyI18n();
   trackVisit(file);
-  maybePushPrompt();
-  if ("serviceWorker" in navigator) {
-    const base = location.pathname.includes("/darkknight-studio") ? "/darkknight-studio" : "";
-    navigator.serviceWorker.register(`${base}/sw.js`).catch(() => {});
-  }
+  maybeShowPushPrompt();
+  registerSW().catch(() => {});
 }
 
 function renderMobileBar(bar, file) {
@@ -124,6 +122,7 @@ function openMoreSheet(file) {
         ${PAGES.filter(([p]) => !["index.html", "projects.html", "bots.html", "shop.html"].includes(p))
           .map(([p, k]) => `<a class="${file === p ? "active" : ""}" href="${href(p)}" data-i18n="${k}"></a>`)
           .join("")}
+        <a href="${href("notifications.html")}" data-i18n="push.settingsTitle"></a>
         <a href="${href("admin-login.html")}" data-i18n="nav.adminLogin" class="admin-entry-sheet"></a>
       </nav>
       <button type="button" class="btn btn-ghost" data-close data-i18n="settings.close"></button>
@@ -176,69 +175,6 @@ async function trackVisit(pageHint) {
   } catch (_) {}
 }
 
-function maybePushPrompt() {
-  if (!("Notification" in window) || !("serviceWorker" in navigator)) return;
-  if (!CONFIG.VAPID_PUBLIC_KEY) return;
-  if (localStorage.getItem("dks-push-asked") === "1") return;
-  if (Notification.permission !== "default") return;
-  setTimeout(() => {
-    if (document.getElementById("push-banner")) return;
-    const el = document.createElement("div");
-    el.id = "push-banner";
-    el.className = "push-banner";
-    el.innerHTML = `
-      <p data-i18n="sections.pushHint"></p>
-      <div class="row">
-        <button type="button" class="btn btn-primary" id="push-yes" data-i18n="sections.enablePush"></button>
-        <button type="button" class="btn btn-ghost" id="push-no">OK</button>
-      </div>`;
-    document.body.appendChild(el);
-    applyI18n();
-    el.querySelector("#push-no").onclick = () => {
-      localStorage.setItem("dks-push-asked", "1");
-      el.remove();
-    };
-    el.querySelector("#push-yes").onclick = async () => {
-      localStorage.setItem("dks-push-asked", "1");
-      try {
-        const perm = await Notification.requestPermission();
-        if (perm !== "granted") {
-          toast(t("sections.pushDenied"), "err");
-          el.remove();
-          return;
-        }
-        const base = location.pathname.includes("/darkknight-studio") ? "/darkknight-studio" : "";
-        const reg = await navigator.serviceWorker.register(`${base}/sw.js`);
-        const sub = await reg.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: urlBase64ToUint8Array(CONFIG.VAPID_PUBLIC_KEY),
-        });
-        const sb = await getSupabase();
-        if (sb) {
-          await sb.from("push_subscriptions").upsert({
-            endpoint: sub.endpoint,
-            visitor_id: visitorId(),
-            keys: sub.toJSON().keys,
-            user_agent: navigator.userAgent.slice(0, 240),
-          }, { onConflict: "endpoint" });
-        }
-        toast(t("sections.pushEnabled"), "ok");
-      } catch (_) {
-        toast(t("sections.error"), "err");
-      }
-      el.remove();
-    };
-  }, 6000);
-}
-
-function urlBase64ToUint8Array(base64String) {
-  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
-  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
-  const raw = atob(base64);
-  const out = new Uint8Array(raw.length);
-  for (let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
-  return out;
-}
 
 export async function loadPublished(table, { featured, limit, search } = {}) {
   const sb = await getSupabase();

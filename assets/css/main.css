@@ -307,3 +307,34 @@ html[dir="rtl"] .hero h1 { letter-spacing: 0; }
   font-size: 0.8rem !important;
 }
 .admin-entry:hover { opacity: 1; }
+
+/* Push prompt */
+.push-prompt {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: grid;
+  place-items: end center;
+  padding: 1rem;
+  padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+  background: rgba(0,0,0,0.45);
+  animation: fadeIn .25s ease;
+}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+.push-prompt-card {
+  width: min(420px, 100%);
+  padding: 1.25rem 1.35rem 1.1rem;
+  border-radius: 22px;
+  text-align: start;
+  box-shadow: 0 24px 60px rgba(0,0,0,0.55);
+}
+.push-prompt-ico { font-size: 1.5rem; margin-bottom: 0.35rem; }
+.push-prompt-card h3 { margin: 0 0 0.5rem; font-size: 1.1rem; }
+.push-prompt-card p { margin: 0 0 1rem; color: var(--muted); font-size: 0.92rem; }
+.push-prompt-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.push-prompt-note { margin: 0.85rem 0 0 !important; font-size: 0.75rem !important; }
+.push-settings { max-width: 480px; }
+.push-status { color: var(--muted); }
+@media (min-width: 861px) {
+  .push-prompt { place-items: center; }
+}

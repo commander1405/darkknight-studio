@@ -186,6 +186,7 @@ export async function bootAdmin() {
     { id: "contact_messages", group: "inbox", label: t("nav.contact"), icon: "✉", show: can(profile, "contact") },
     { id: "analytics", group: "system", label: getLang() === "fa" ? "آمار" : "Analytics", icon: "▤", show: can(profile, "analytics") },
     { id: "settings", group: "system", label: getLang() === "fa" ? "تنظیمات سایت" : "Settings", icon: "⚙", show: can(profile, "settings") },
+    { id: "notifications", group: "system", label: getLang() === "fa" ? "اعلان‌ها" : "Notifications", icon: "🔔", show: isOwner(profile) || can(profile, "settings") },
     { id: "admins", group: "system", label: getLang() === "fa" ? "مدیران" : "Admins", icon: "♛", show: isOwner(profile) },
   ].filter((x) => x.show);
 
@@ -225,6 +226,7 @@ export async function bootAdmin() {
     if (id === "contact_messages") return renderContacts(panel, sb, profile);
     if (id === "analytics") return renderAnalytics(panel, sb, profile);
     if (id === "settings") return renderSettings(panel, sb, profile);
+    if (id === "notifications") return renderNotifications(panel, sb, profile);
     if (id === "admins") return renderAdmins(panel, sb, profile);
   }
 
@@ -634,5 +636,105 @@ async function renderAdmins(panel, sb, profile) {
         }
       };
     };
+  });
+}
+
+
+async function renderNotifications(panel, sb, profile) {
+  if (!isOwner(profile) && !can(profile, "settings")) {
+    panel.innerHTML = `<div class="empty">${t("admin.unauthorized")}</div>`;
+    return;
+  }
+  const { data: cfgRow } = await sb.from("website_settings").select("*").eq("key", "push_config").maybeSingle();
+  const cfg = cfgRow?.value || { enabled: true, news: true, projects: true, bots: true, products: false };
+  const { count: subCount } = await sb.from("push_subscriptions").select("*", { count: "exact", head: true }).eq("is_active", true);
+  const { data: logs } = await sb.from("notification_logs").select("*").order("created_at", { ascending: false }).limit(20);
+  const { count: pending } = await sb.from("push_outbox").select("*", { count: "exact", head: true }).eq("status", "pending");
+
+  panel.innerHTML = `
+    <div class="stat-grid">
+      <div class="stat-card"><div class="label">Active subscriptions</div><div class="value">${subCount ?? 0}</div></div>
+      <div class="stat-card"><div class="label">Pending outbox</div><div class="value">${pending ?? 0}</div></div>
+    </div>
+    <form class="form form-drawer" id="push-cfg" style="max-width:520px">
+      <label style="flex-direction:row;display:flex;gap:0.5rem;align-items:center"><input type="checkbox" name="enabled" ${cfg.enabled !== false ? "checked" : ""}/> System enabled</label>
+      <label style="flex-direction:row;display:flex;gap:0.5rem;align-items:center"><input type="checkbox" name="news" ${cfg.news !== false ? "checked" : ""}/> News</label>
+      <label style="flex-direction:row;display:flex;gap:0.5rem;align-items:center"><input type="checkbox" name="projects" ${cfg.projects !== false ? "checked" : ""}/> Projects</label>
+      <label style="flex-direction:row;display:flex;gap:0.5rem;align-items:center"><input type="checkbox" name="bots" ${cfg.bots !== false ? "checked" : ""}/> Bots</label>
+      <label style="flex-direction:row;display:flex;gap:0.5rem;align-items:center"><input type="checkbox" name="products" ${cfg.products === true ? "checked" : ""}/> Products</label>
+      <button class="btn btn-primary" type="submit">${t("sections.submit")}</button>
+    </form>
+    ${isOwner(profile) ? `
+    <div class="form-drawer" style="margin-top:1rem;max-width:520px">
+      <h3 style="margin-top:0">Process / Test</h3>
+      <p style="color:var(--muted);font-size:0.85rem">Requires Edge Function <code>send-push</code> + VAPID secrets.</p>
+      <div style="display:flex;flex-wrap:wrap;gap:0.5rem">
+        <button type="button" class="btn btn-primary" id="btn-process-outbox">Process outbox</button>
+        <button type="button" class="btn btn-ghost" id="btn-test-push">Send test</button>
+      </div>
+    </div>` : ""}
+    <h3>Recent logs</h3>
+    <div class="admin-table-wrap"><table class="admin-table">
+      <thead><tr><th>title</th><th>ok</th><th>fail</th><th>when</th></tr></thead>
+      <tbody>
+        ${(logs || []).map((l) => `<tr>
+          <td>${escapeHtml(l.title || "")}</td>
+          <td>${l.success_count ?? 0}</td>
+          <td>${l.fail_count ?? 0}</td>
+          <td>${escapeHtml(formatDate(l.created_at))}</td>
+        </tr>`).join("") || `<tr><td colspan="4">${t("sections.empty")}</td></tr>`}
+      </tbody>
+    </table></div>`;
+
+  panel.querySelector("#push-cfg").onsubmit = async (e) => {
+    e.preventDefault();
+    const f = e.target;
+    const value = {
+      enabled: !!f.enabled.checked,
+      news: !!f.news.checked,
+      projects: !!f.projects.checked,
+      bots: !!f.bots.checked,
+      products: !!f.products.checked,
+    };
+    const { error } = await sb.from("website_settings").upsert({ key: "push_config", value, updated_at: new Date().toISOString() });
+    if (error) toast(error.message, "err");
+    else toast(t("sections.success"), "ok");
+  };
+
+  async function callSendPush(payload) {
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) throw new Error("no session");
+    const base = (await import("./config.js")).CONFIG.SUPABASE_URL;
+    const res = await fetch(`${base}/functions/v1/send-push`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${session.access_token}`,
+        apikey: (await import("./config.js")).CONFIG.SUPABASE_ANON_KEY,
+      },
+      body: JSON.stringify(payload),
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(json.error || res.statusText);
+    return json;
+  }
+
+  panel.querySelector("#btn-process-outbox")?.addEventListener("click", async () => {
+    try {
+      const r = await callSendPush({ mode: "process_outbox" });
+      toast(`Processed: ${r.processed ?? 0}`, "ok");
+      renderNotifications(panel, sb, profile);
+    } catch (err) {
+      toast(err.message || String(err), "err");
+    }
+  });
+  panel.querySelector("#btn-test-push")?.addEventListener("click", async () => {
+    try {
+      const r = await callSendPush({ mode: "test", title: "DARKKNIGHT STUDIO", body: "Test notification", url: "./index.html" });
+      toast(`Test ok=${r.ok} fail=${r.fail}`, r.ok ? "ok" : "err");
+      renderNotifications(panel, sb, profile);
+    } catch (err) {
+      toast(err.message || String(err), "err");
+    }
   });
 }

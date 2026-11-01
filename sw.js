@@ -1,15 +1,17 @@
-/* DARKKNIGHT STUDIO SW — static shell only; never cache admin */
-const CACHE = "dks-shell-v2";
+/* DARKKNIGHT STUDIO SW — shell cache + Web Push */
+const CACHE = "dks-shell-v3";
 const SHELL = [
   "./",
   "./index.html",
   "./offline.html",
+  "./notifications.html",
   "./assets/css/main.css",
   "./assets/js/config.js",
   "./assets/js/i18n.js",
   "./assets/js/layout.js",
   "./assets/js/utils.js",
   "./assets/js/supabase-client.js",
+  "./assets/js/push.js",
 ];
 
 self.addEventListener("install", (e) => {
@@ -29,13 +31,11 @@ self.addEventListener("fetch", (e) => {
   if (req.method !== "GET") return;
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
-  // never cache admin or API-ish
   if (url.pathname.includes("admin")) return;
 
   e.respondWith(
     fetch(req)
       .then((res) => {
-        // only cache same-origin static shell assets
         const dest = req.destination;
         if (["style", "script", "document"].includes(dest) && res.ok) {
           const copy = res.clone();
@@ -51,20 +51,54 @@ self.addEventListener("fetch", (e) => {
 });
 
 self.addEventListener("push", (e) => {
-  let data = { title: "DARKKNIGHT STUDIO", body: "New update", url: "./news.html" };
+  let data = {
+    title: "DARKKNIGHT STUDIO",
+    body: "",
+    url: "./index.html",
+    tag: "dks-generic",
+  };
   try {
-    if (e.data) data = { ...data, ...e.data.json() };
-  } catch (_) {}
+    if (e.data) {
+      const parsed = e.data.json();
+      data = { ...data, ...parsed };
+    }
+  } catch (_) {
+    try {
+      data.body = e.data ? e.data.text() : data.body;
+    } catch (__) {}
+  }
   e.waitUntil(
-    self.registration.showNotification(data.title, {
-      body: data.body,
-      data: { url: data.url || "./news.html" },
+    self.registration.showNotification(data.title || "DARKKNIGHT STUDIO", {
+      body: data.body || "",
+      icon: "./assets/icons/icon.svg",
+      badge: "./assets/icons/icon.svg",
+      tag: data.tag || "dks",
+      renotify: !!data.renotify,
+      data: { url: data.url || "./index.html" },
     })
   );
 });
 
 self.addEventListener("notificationclick", (e) => {
   e.notification.close();
-  const url = e.notification.data?.url || "./";
-  e.waitUntil(clients.openWindow(url));
+  let url = e.notification.data?.url || "./index.html";
+  // relative → absolute under SW scope
+  try {
+    url = new URL(url, self.registration.scope).href;
+  } catch (_) {}
+  e.waitUntil(
+    (async () => {
+      const all = await clients.matchAll({ type: "window", includeControlled: true });
+      for (const c of all) {
+        if (c.url.startsWith(self.registration.scope) && "focus" in c) {
+          await c.focus();
+          if ("navigate" in c) {
+            try { await c.navigate(url); } catch (_) {}
+          }
+          return;
+        }
+      }
+      await clients.openWindow(url);
+    })()
+  );
 });
