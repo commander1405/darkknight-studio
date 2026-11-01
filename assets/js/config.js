@@ -9,7 +9,7 @@ export const CONFIG = {
   TRACK_VISITOR_URL: "",
   SUBMIT_PUBLIC_URL: "",
 
-  VAPID_PUBLIC_KEY: "",
+  VAPID_PUBLIC_KEY: "BKGYlXknKxB1DfnRP5wnHmRWY8mlzdQ1xwhD-mF4-Yca1uvpL4ZoeqCgkzIRvTmjz5JbvWe4bXEHmhPOrxRvvBU",
 };
 
 export function isConfigured() {
