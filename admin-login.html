@@ -1,63 +1,134 @@
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Admin Login — DARKKNIGHT STUDIO</title>
-  <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="./assets/css/main.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./assets/css/main.css">
 </head>
 <body>
   <header class="site-header" id="site-header"></header>
+
   <main class="section container" style="max-width:420px">
     <div class="glass">
-      <h1 data-i18n="admin.login"></h1>
+      <h1 data-i18n="admin.login">ورود مدیریت</h1>
+
       <form class="form" id="login-form">
-        <label><span data-i18n="admin.email"></span><input type="email" name="email" required autocomplete="username" /></label>
-        <label><span data-i18n="admin.password"></span><input type="password" name="password" required autocomplete="current-password" minlength="6" /></label>
-        <button class="btn btn-primary" type="submit" data-i18n="admin.signIn"></button>
+        <label>
+          <span data-i18n="admin.email">ایمیل</span>
+          <input type="email" name="email" required autocomplete="username">
+        </label>
+
+        <label>
+          <span data-i18n="admin.password">رمز عبور</span>
+          <input type="password" name="password" required autocomplete="current-password" minlength="6">
+        </label>
+
+        <button class="btn btn-primary" id="login-submit" type="submit">
+          ورود
+        </button>
       </form>
-      <p id="err" style="color:#fca5a5;display:none"></p>
+
+      <p id="err" role="alert" aria-live="polite"
+         style="color:#fca5a5;display:none;white-space:pre-wrap;overflow-wrap:anywhere"></p>
     </div>
   </main>
+
   <footer class="site-footer" id="site-footer"></footer>
+
   <script type="module">
     import { renderShell } from "./assets/js/layout.js";
     import { getSupabase, isConfigured } from "./assets/js/supabase-client.js";
     import { t, applyI18n } from "./assets/js/i18n.js";
     import { href } from "./assets/js/utils.js";
-    renderShell();
-    document.getElementById("mobile-tabbar")?.remove();
-    applyI18n();
-    document.getElementById("login-form").onsubmit = async (e) => {
-      e.preventDefault();
-      const err = document.getElementById("err");
-      err.style.display = "none";
+
+    const form = document.getElementById("login-form");
+    const errBox = document.getElementById("err");
+    const submit = document.getElementById("login-submit");
+
+    function showError(message) {
+      errBox.textContent = message || "خطای نامشخصی رخ داد.";
+      errBox.style.display = "block";
+    }
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      errBox.style.display = "none";
+
       if (!isConfigured()) {
-        err.textContent = t("sections.notConfigured");
-        err.style.display = "block";
+        showError("تنظیمات Supabase کامل نیست.");
         return;
       }
-      const fd = new FormData(e.target);
-      const sb = await getSupabase();
-      const { data, error } = await sb.auth.signInWithPassword({
-        email: String(fd.get("email")).trim(),
-        password: String(fd.get("password")),
-      });
-      if (error) {
-        err.textContent = error.message;
-        err.style.display = "block";
-        return;
+
+      const fd = new FormData(form);
+      const email = String(fd.get("email") || "").trim();
+      const password = String(fd.get("password") || "");
+
+      submit.disabled = true;
+      const oldText = submit.textContent;
+      submit.textContent = "در حال ورود…";
+
+      try {
+        const sb = await getSupabase();
+
+        if (!sb) {
+          throw new Error("اتصال Supabase ساخته نشد.");
+        }
+
+        const { data, error } = await sb.auth.signInWithPassword({
+          email,
+          password
+        });
+
+        if (error) throw error;
+        if (!data?.user) throw new Error("اطلاعات حساب دریافت نشد.");
+
+        const { data: profile, error: profileError } = await sb
+          .from("profiles")
+          .select("role, is_active")
+          .eq("id", data.user.id)
+          .maybeSingle();
+
+        if (profileError) {
+          await sb.auth.signOut();
+          throw new Error("خطا در دریافت دسترسی: " + profileError.message);
+        }
+
+        if (
+          !profile ||
+          !profile.is_active ||
+          !["owner", "admin"].includes(profile.role)
+        ) {
+          await sb.auth.signOut();
+          throw new Error(
+            t("admin.unauthorized") || "این حساب دسترسی مدیریت ندارد."
+          );
+        }
+
+        location.replace(href("admin.html"));
+
+      } catch (error) {
+        console.error("[DARKKNIGHT LOGIN]", error);
+
+        showError(
+          error?.message ||
+          "ارتباط برقرار نشد. اینترنت و تنظیمات Supabase را بررسی کنید."
+        );
+
+        submit.disabled = false;
+        submit.textContent = oldText || "ورود";
       }
-      const { data: profile } = await sb.from("profiles").select("role, is_active").eq("id", data.user.id).maybeSingle();
-      if (!profile || !profile.is_active || !["owner", "admin"].includes(profile.role)) {
-        await sb.auth.signOut();
-        err.textContent = t("admin.unauthorized");
-        err.style.display = "block";
-        return;
-      }
-      location.href = href("admin.html");
-    };
+    });
+
+    try {
+      renderShell();
+      document.getElementById("mobile-tabbar")?.remove();
+      applyI18n();
+    } catch (error) {
+      console.error("[LOGIN SHELL]", error);
+      showError("خطا در بارگذاری صفحه: " + error.message);
+    }
   </script>
 </body>
 </html>
